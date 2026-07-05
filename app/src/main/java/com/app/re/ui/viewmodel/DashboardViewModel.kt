@@ -1,0 +1,73 @@
+package com.app.re.ui.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.app.re.data.ResumeRepository
+import com.app.re.data.model.RepoStatsResponse
+import com.app.re.util.SecurePrefsManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class DashboardInfo(
+    val username: String,
+    val repoName: String,
+    val avatarInitial: Char,
+    val portfolioUrl: String
+)
+
+class DashboardViewModel(private val repository: ResumeRepository = ResumeRepository()) : ViewModel() {
+
+    private val _info = MutableStateFlow<DashboardInfo?>(null)
+    val info: StateFlow<DashboardInfo?> = _info.asStateFlow()
+
+    private val _repoStats = MutableStateFlow<RepoStatsResponse?>(null)
+    val repoStats: StateFlow<RepoStatsResponse?> = _repoStats.asStateFlow()
+
+    init {
+        loadInfo()
+    }
+
+    private fun loadInfo() {
+        val username = SecurePrefsManager.getUsername() ?: return
+        val repoName = SecurePrefsManager.getRepoName()?.trimEnd('/', '.') ?: return
+
+        _info.value = DashboardInfo(
+            username = username,
+            repoName = repoName,
+            avatarInitial = username.first().uppercaseChar(),
+            portfolioUrl = buildPortfolioUrl(username, repoName)
+        )
+
+        viewModelScope.launch {
+            try {
+                _repoStats.value = repository.getRepoStats(repoName)
+            } catch (e: Exception) {
+                // Ignore stats fetch failure quietly
+            }
+        }
+    }
+
+    /**
+     * Builds the GitHub Pages URL.
+     *
+     * Two cases:
+     *  - If repo name is already "username.github.io" → https://username.github.io
+     *  - Otherwise (project pages) → https://username.github.io/reponame
+     */
+    fun buildPortfolioUrl(username: String, repoName: String): String {
+        val lowerUser = username.lowercase()
+        val r = repoName.trimEnd('/', '.')
+        return if (r.lowercase() == "$lowerUser.github.io") {
+            "https://$lowerUser.github.io"
+        } else {
+            "https://$lowerUser.github.io/$r"
+        }
+    }
+
+    fun logout(onDone: () -> Unit) {
+        SecurePrefsManager.clearAll()
+        onDone()
+    }
+}
