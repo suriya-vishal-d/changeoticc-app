@@ -38,12 +38,17 @@ data class RepoStatsResponse(
     val forks: Int
 )
 
+data class SkillGroup(
+    val category: String?,
+    val items: List<String>?
+)
+
 data class ResumeData(
     val name: String?,
     val tagline: String?,
     val about: String?,
     val profileImageUrl: String?,
-    val skills: List<String>?,
+    val skills: List<SkillGroup>?,
     val projects: List<Project>?,
     val experience: List<Experience>?,
     val education: List<Education>?,

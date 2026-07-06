@@ -166,17 +166,40 @@ class EditViewModel(
 
     // ─── Skills Tab ───────────────────────────────────────────────────────────
 
-    fun addSkill(skill: String) {
+    fun addSkill(category: String, skill: String) {
         val trimmed = skill.trim()
+        val catTrimmed = if (category.isBlank()) "General" else category.trim()
         if (trimmed.isBlank()) return
-        val current = _resumeData.value.skills.orEmpty()
-        if (current.any { it.equals(trimmed, ignoreCase = true) }) return
-        _resumeData.value = _resumeData.value.copy(skills = current + trimmed)
+        
+        val current = _resumeData.value.skills.orEmpty().toMutableList()
+        val groupIndex = current.indexOfFirst { it.category.equals(catTrimmed, ignoreCase = true) }
+        
+        if (groupIndex != -1) {
+            val group = current[groupIndex]
+            val items = group.items.orEmpty()
+            if (!items.any { it.equals(trimmed, ignoreCase = true) }) {
+                current[groupIndex] = group.copy(items = items + trimmed)
+            }
+        } else {
+            current.add(SkillGroup(category = catTrimmed, items = listOf(trimmed)))
+        }
+        
+        _resumeData.value = _resumeData.value.copy(skills = current)
     }
 
-    fun removeSkill(skill: String) {
-        val updated = _resumeData.value.skills.orEmpty().filter { it != skill }
-        _resumeData.value = _resumeData.value.copy(skills = updated)
+    fun removeSkill(category: String, skill: String) {
+        val current = _resumeData.value.skills.orEmpty().toMutableList()
+        val groupIndex = current.indexOfFirst { it.category == category }
+        if (groupIndex != -1) {
+            val group = current[groupIndex]
+            val updatedItems = group.items.orEmpty().filter { it != skill }
+            if (updatedItems.isEmpty()) {
+                current.removeAt(groupIndex)
+            } else {
+                current[groupIndex] = group.copy(items = updatedItems)
+            }
+            _resumeData.value = _resumeData.value.copy(skills = current)
+        }
     }
 
     // ─── Projects Tab ─────────────────────────────────────────────────────────
