@@ -36,6 +36,23 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
     }
 
     /**
+     * Just verifies that the file exists by fetching it.
+     */
+    suspend fun fetchResume(
+        owner: String,
+        repo: String,
+        filePath: String
+    ): com.app.re.data.model.FetchResponse {
+        return api.fetchResume(
+            ParseRequest(
+                owner = owner,
+                repo = repo,
+                filePath = filePath
+            )
+        )
+    }
+
+    /**
      * Sends updated [ResumeData] back to the backend, which commits the changes to GitHub.
      * Returns [UpdateResponse] with a commit URL on success.
      */

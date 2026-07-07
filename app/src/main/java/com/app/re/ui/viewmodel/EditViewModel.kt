@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CompletableDeferred
+import com.app.re.data.model.SkillGroup
 class EditViewModel(
     private val repository: ResumeRepository = ResumeRepository()
 ) : ViewModel() {
@@ -65,40 +67,36 @@ class EditViewModel(
     }
 
     private fun loadData() {
-        val cached = AppCache.parseResponse
-        if (cached != null) {
-            // Use cached data — never re-parse
-            cachedSha = cached.sha
-            cachedOriginalHtml = cached.originalHtml
-            val data = cached.resumeData
-            _originalResumeData.value = data
-            _resumeData.value = data
-            _screenState.value = EditScreenState.Ready
-        } else {
-            // Fallback: re-fetch from network (app restart case, cache was cleared)
-            val owner = SecurePrefsManager.getUsername()
-            val repo = SecurePrefsManager.getRepoName()?.trimEnd('/', '.')
-            val filePath = SecurePrefsManager.getFilePath()?.trimStart('/')
-            if (owner == null || repo == null || filePath == null) {
-                _screenState.value = EditScreenState.Error("Session data missing. Please log in again.")
-                return
-            }
-            _screenState.value = EditScreenState.Loading
-            viewModelScope.launch {
-                try {
-                    val response = repository.parseResume(owner, repo, filePath)
-                    AppCache.parseResponse = response
-                    cachedSha = response.sha
-                    cachedOriginalHtml = response.originalHtml
-                    val data = response.resumeData
-                    _originalResumeData.value = data
-                    _resumeData.value = data
-                    _screenState.value = EditScreenState.Ready
-                } catch (e: Exception) {
-                    _screenState.value = EditScreenState.Error(
-                        e.message ?: "Failed to load portfolio. Please try again."
-                    )
+        val owner = SecurePrefsManager.getUsername()
+        val repo = SecurePrefsManager.getRepoName()?.trimEnd('/', '.')
+        val filePath = SecurePrefsManager.getFilePath()?.trimStart('/')
+        if (owner == null || repo == null || filePath == null) {
+            _screenState.value = EditScreenState.Error("Session data missing. Please log in again.")
+            return
+        }
+
+        _screenState.value = EditScreenState.Loading
+        viewModelScope.launch {
+            try {
+                var deferred = AppCache.parseDeferred
+                if (deferred == null) {
+                    deferred = async { repository.parseResume(owner, repo, filePath) }
+                    AppCache.parseDeferred = deferred
                 }
+
+                val response = deferred.await()
+                cachedSha = response.sha
+                cachedOriginalHtml = response.originalHtml
+                val data = response.resumeData
+                _originalResumeData.value = data
+                _resumeData.value = data
+                _screenState.value = EditScreenState.Ready
+            } catch (e: Exception) {
+                // Clear the deferred so a retry fetches again
+                AppCache.parseDeferred = null
+                _screenState.value = EditScreenState.Error(
+                    e.message ?: "Failed to load portfolio. Please try again."
+                )
             }
         }
     }
@@ -332,10 +330,12 @@ class EditViewModel(
                 // Update local cache so future edits (and re-opening the screen) use the new data!
                 cachedSha = response.newSha
                 cachedOriginalHtml = response.updatedHtml
-                AppCache.parseResponse = com.app.re.data.model.ParseResponse(
-                    sha = response.newSha,
-                    originalHtml = response.updatedHtml,
-                    resumeData = _resumeData.value
+                AppCache.parseDeferred = CompletableDeferred(
+                    com.app.re.data.model.ParseResponse(
+                        sha = response.newSha,
+                        originalHtml = response.updatedHtml,
+                        resumeData = _resumeData.value
+                    )
                 )
 
                 SecurePrefsManager.saveLastUpdated(System.currentTimeMillis())

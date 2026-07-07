@@ -85,6 +85,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel()
 ) {
     val info by viewModel.info.collectAsStateWithLifecycle()
+    val isParseReady by viewModel.isParseReady.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val showPortfolioWarning = remember { androidx.compose.runtime.mutableStateOf(false) }
 
@@ -210,7 +211,17 @@ fun DashboardScreen(
                 info?.let { dashInfo ->
                     QuickActionsRow(
                         portfolioUrl = dashInfo.portfolioUrl,
-                        onEdit = onNavigateToEdit
+                        onEdit = {
+                            if (isParseReady) {
+                                onNavigateToEdit()
+                            } else {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "AI is analyzing your portfolio... Please wait a moment.",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     )
                 }
 

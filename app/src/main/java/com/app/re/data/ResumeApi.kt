@@ -17,6 +17,9 @@ interface ResumeApi {
     @POST("resume/parse")
     suspend fun parseResume(@Body request: ParseRequest): ParseResponse
 
+    @POST("resume/fetch")
+    suspend fun fetchResume(@Body request: ParseRequest): com.app.re.data.model.FetchResponse
+
     @POST("resume/update")
     suspend fun updateResume(@Body request: UpdateRequest): UpdateResponse
 

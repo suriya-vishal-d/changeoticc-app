@@ -12,9 +12,9 @@ import com.app.re.data.model.ParseResponse
 object AppCache {
 
     @Volatile
-    var parseResponse: ParseResponse? = null
+    var parseDeferred: kotlinx.coroutines.Deferred<ParseResponse>? = null
 
     fun clear() {
-        parseResponse = null
+        parseDeferred = null
     }
 }

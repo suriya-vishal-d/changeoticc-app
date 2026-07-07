@@ -12,6 +12,11 @@ data class ParseResponse(
     val resumeData: ResumeData
 )
 
+data class FetchResponse(
+    val message: String,
+    val sha: String
+)
+
 data class UpdateRequest(
     val owner: String,
     val repo: String,

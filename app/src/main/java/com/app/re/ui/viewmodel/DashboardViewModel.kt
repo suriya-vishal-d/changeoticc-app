@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import com.app.re.util.AppCache
 
 data class DashboardInfo(
     val username: String,
@@ -24,6 +26,9 @@ class DashboardViewModel(private val repository: ResumeRepository = ResumeReposi
 
     private val _repoStats = MutableStateFlow<RepoStatsResponse?>(null)
     val repoStats: StateFlow<RepoStatsResponse?> = _repoStats.asStateFlow()
+
+    private val _isParseReady = MutableStateFlow(false)
+    val isParseReady: StateFlow<Boolean> = _isParseReady.asStateFlow()
 
     init {
         loadInfo()
@@ -45,6 +50,26 @@ class DashboardViewModel(private val repository: ResumeRepository = ResumeReposi
                 _repoStats.value = repository.getRepoStats(repoName)
             } catch (e: Exception) {
                 // Ignore stats fetch failure quietly
+            }
+        }
+
+        // Start background parsing if not already started
+        if (AppCache.parseDeferred == null) {
+            val filePath = SecurePrefsManager.getFilePath()?.trimStart('/') ?: "index.html"
+            val deferred = viewModelScope.async {
+                repository.parseResume(username, repoName, filePath)
+            }
+            AppCache.parseDeferred = deferred
+        }
+        
+        // Wait for it to finish so we can update isParseReady
+        viewModelScope.launch {
+            try {
+                AppCache.parseDeferred?.await()
+                _isParseReady.value = true
+            } catch (e: Exception) {
+                // Set to true even on error, so EditViewModel can show the error screen
+                _isParseReady.value = true
             }
         }
     }

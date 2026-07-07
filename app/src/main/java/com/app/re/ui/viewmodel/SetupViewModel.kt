@@ -54,7 +54,7 @@ class SetupViewModel(
 
         viewModelScope.launch {
             try {
-                val response = repository.parseResume(
+                val response = repository.fetchResume(
                     owner = owner,
                     repo = trimmedRepo,
                     filePath = trimmedPath
@@ -65,15 +65,11 @@ class SetupViewModel(
                 SecurePrefsManager.saveFilePath(trimmedPath)
                 SecurePrefsManager.setFirstLaunchDone()
 
-                // Cache in both the local property and the process-level AppCache
-                // so EditViewModel can access it without re-calling the API.
-                _cachedParseResponse = response
-                AppCache.parseResponse = response
+                // Clear cache so Dashboard knows it needs to start parsing in background
+                _cachedParseResponse = null
+                AppCache.clear()
 
-                val detectedName = response.resumeData.name?.takeIf { it.isNotBlank() }
-                    ?: "Your Portfolio"
-
-                _uiState.value = SetupUiState.Success(detectedName = detectedName)
+                _uiState.value = SetupUiState.Success(detectedName = trimmedRepo)
 
             } catch (e: Exception) {
                 val message = when {
