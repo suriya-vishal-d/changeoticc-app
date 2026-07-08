@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CompletableDeferred
+import retrofit2.HttpException
+import org.json.JSONObject
+import kotlinx.coroutines.CancellationException
 import com.app.re.data.model.SkillGroup
 class EditViewModel(
     private val repository: ResumeRepository = ResumeRepository()
@@ -80,7 +83,7 @@ class EditViewModel(
             try {
                 var deferred = AppCache.parseDeferred
                 if (deferred == null) {
-                    deferred = async { repository.parseResume(owner, repo, filePath) }
+                    deferred = viewModelScope.async { repository.parseResume(owner, repo, filePath) }
                     AppCache.parseDeferred = deferred
                 }
 
@@ -94,9 +97,28 @@ class EditViewModel(
             } catch (e: Exception) {
                 // Clear the deferred so a retry fetches again
                 AppCache.parseDeferred = null
-                _screenState.value = EditScreenState.Error(
-                    e.message ?: "Failed to load portfolio. Please try again."
-                )
+
+                if (e is CancellationException) {
+                    _screenState.value = EditScreenState.Error("Loading was cancelled. Please try again.")
+                    return@launch
+                }
+
+                var errorMessage = e.message ?: "Failed to load portfolio. Please try again."
+                if (e is HttpException) {
+                    try {
+                        val errorString = e.response()?.errorBody()?.string()
+                        if (!errorString.isNullOrBlank()) {
+                            val json = JSONObject(errorString)
+                            if (json.has("message")) {
+                                errorMessage = json.getString("message")
+                            } else if (json.has("error")) {
+                                errorMessage = json.getString("error")
+                            }
+                        }
+                    } catch (ignore: Exception) {}
+                }
+
+                _screenState.value = EditScreenState.Error(errorMessage)
             }
         }
     }
@@ -330,13 +352,15 @@ class EditViewModel(
                 // Update local cache so future edits (and re-opening the screen) use the new data!
                 cachedSha = response.newSha
                 cachedOriginalHtml = response.updatedHtml
-                AppCache.parseDeferred = CompletableDeferred(
-                    com.app.re.data.model.ParseResponse(
-                        sha = response.newSha,
-                        originalHtml = response.updatedHtml,
-                        resumeData = _resumeData.value
-                    )
+                
+                val newParseResponse = com.app.re.data.model.ParseResponse(
+                    sha = response.newSha,
+                    originalHtml = response.updatedHtml,
+                    resumeData = _resumeData.value
                 )
+                
+                AppCache.parseDeferred = CompletableDeferred(newParseResponse)
+                SecurePrefsManager.saveCachedParseResponse(newParseResponse)
 
                 SecurePrefsManager.saveLastUpdated(System.currentTimeMillis())
                 SecurePrefsManager.setPortfolioUpdateAcknowledged(false)

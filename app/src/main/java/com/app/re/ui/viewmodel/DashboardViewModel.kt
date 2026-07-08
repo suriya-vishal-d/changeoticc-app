@@ -57,7 +57,26 @@ class DashboardViewModel(private val repository: ResumeRepository = ResumeReposi
         if (AppCache.parseDeferred == null) {
             val filePath = SecurePrefsManager.getFilePath()?.trimStart('/') ?: "index.html"
             val deferred = viewModelScope.async {
-                repository.parseResume(username, repoName, filePath)
+                val cached = SecurePrefsManager.getCachedParseResponse()
+                var latestSha: String? = null
+                
+                try {
+                    // Check if file has changed on GitHub
+                    val fetchRes = repository.fetchResume(username, repoName, filePath)
+                    latestSha = fetchRes.sha
+                    if (cached != null && cached.sha == latestSha) {
+                        return@async cached
+                    }
+                } catch (e: Exception) {
+                    // Offline or repo access error, just fallback to cache if available
+                    if (cached != null) return@async cached
+                }
+
+                // If no cache or sha mismatch, we must run the AI parser
+                val response = repository.parseResume(username, repoName, filePath)
+                // Cache it so next restart is fast
+                SecurePrefsManager.saveCachedParseResponse(response)
+                response
             }
             AppCache.parseDeferred = deferred
         }
