@@ -3,7 +3,8 @@ package com.app.re.data.model
 data class ParseRequest(
     val owner: String,
     val repo: String,
-    val filePath: String
+    val filePath: String,
+    val branch: String? = null
 )
 
 data class ParseResponse(
@@ -16,6 +17,7 @@ data class UpdateRequest(
     val owner: String,
     val repo: String,
     val filePath: String,
+    val branch: String? = null,
     val sha: String,
     val originalHtml: String,
     val resumeData: ResumeData

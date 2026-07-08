@@ -60,6 +60,7 @@ fun SetupScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     var repoName by rememberSaveable { mutableStateOf("") }
+    var branchName by rememberSaveable { mutableStateOf("main") }
     var filePath by rememberSaveable { mutableStateOf("index.html") }
 
     val username = remember { SecurePrefsManager.getUsername() ?: "there" }
@@ -171,6 +172,38 @@ fun SetupScreen(
                         )
                     }
 
+                    // Branch name field
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Branch Name",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        OutlinedTextField(
+                            value = branchName,
+                            onValueChange = { branchName = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text(
+                                    text = "e.g. main, master, dev",
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            },
+                            enabled = isFormEnabled,
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        )
+                    }
+
                     // File path field
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
@@ -209,7 +242,7 @@ fun SetupScreen(
 
                     // Find My Portfolio button
                     Button(
-                        onClick = { viewModel.findPortfolio(repoName, filePath) },
+                        onClick = { viewModel.findPortfolio(repoName, filePath, branchName) },
                         enabled = isFormEnabled,
                         modifier = Modifier
                             .fillMaxWidth()

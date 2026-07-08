@@ -24,7 +24,8 @@ interface ResumeApi {
     @POST("resume/upload-image")
     suspend fun uploadProfileImage(
         @Part image: MultipartBody.Part,
-        @Part("repo") repo: RequestBody
+        @Part("repo") repo: RequestBody,
+        @Part("branch") branch: RequestBody?
     ): ImageUploadResponse
 
     @retrofit2.http.GET("resume/stats")

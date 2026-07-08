@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-
+import com.app.re.data.model.SkillGroup
 class EditViewModel(
     private val repository: ResumeRepository = ResumeRepository()
 ) : ViewModel() {
@@ -79,6 +79,7 @@ class EditViewModel(
             val owner = SecurePrefsManager.getUsername()
             val repo = SecurePrefsManager.getRepoName()?.trimEnd('/', '.')
             val filePath = SecurePrefsManager.getFilePath()?.trimStart('/')
+            val branch = SecurePrefsManager.getBranchName()
             if (owner == null || repo == null || filePath == null) {
                 _screenState.value = EditScreenState.Error("Session data missing. Please log in again.")
                 return
@@ -86,7 +87,7 @@ class EditViewModel(
             _screenState.value = EditScreenState.Loading
             viewModelScope.launch {
                 try {
-                    val response = repository.parseResume(owner, repo, filePath)
+                    val response = repository.parseResume(owner, repo, filePath, branch)
                     AppCache.parseResponse = response
                     cachedSha = response.sha
                     cachedOriginalHtml = response.originalHtml
@@ -140,10 +141,11 @@ class EditViewModel(
             _photoUploadState.value = PhotoUploadState.Error("Repository not set. Please log in again.")
             return
         }
+        val branch = SecurePrefsManager.getBranchName()
         _photoUploadState.value = PhotoUploadState.Uploading
         viewModelScope.launch {
             try {
-                val imageUrl = repository.uploadProfileImage(repo, imageUri, context)
+                val imageUrl = repository.uploadProfileImage(repo, imageUri, context, branch)
                 updateProfileImageUrl(imageUrl)
                 _photoUploadState.value = PhotoUploadState.Success(imageUrl)
             } catch (e: Exception) {
@@ -320,10 +322,12 @@ class EditViewModel(
                     _photoUploadState.first { it !is PhotoUploadState.Uploading }
                 }
 
+                val branch = SecurePrefsManager.getBranchName()
                 val response = repository.updateResume(
                     owner = owner,
                     repo = repo,
                     filePath = filePath,
+                    branch = branch,
                     sha = cachedSha,
                     originalHtml = cachedOriginalHtml,
                     resumeData = _resumeData.value  // re-read after possible URL update from upload

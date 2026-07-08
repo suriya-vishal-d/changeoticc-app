@@ -24,13 +24,15 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
     suspend fun parseResume(
         owner: String,
         repo: String,
-        filePath: String
+        filePath: String,
+        branch: String?
     ): ParseResponse {
         return api.parseResume(
             ParseRequest(
                 owner = owner,
                 repo = repo,
-                filePath = filePath
+                filePath = filePath,
+                branch = branch
             )
         )
     }
@@ -43,6 +45,7 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
         owner: String,
         repo: String,
         filePath: String,
+        branch: String?,
         sha: String,
         originalHtml: String,
         resumeData: ResumeData
@@ -52,6 +55,7 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
                 owner = owner,
                 repo = repo,
                 filePath = filePath,
+                branch = branch,
                 sha = sha,
                 originalHtml = originalHtml,
                 resumeData = resumeData
@@ -70,7 +74,7 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
      *
      * @return the public GitHub Pages URL of the uploaded image
      */
-    suspend fun uploadProfileImage(repo: String, imageUri: Uri, context: Context): String {
+    suspend fun uploadProfileImage(repo: String, imageUri: Uri, context: Context, branch: String?): String {
         // 1. Decode bitmap from URI
         val originalBitmap = context.contentResolver.openInputStream(imageUri)?.use { stream ->
             BitmapFactory.decodeStream(stream)
@@ -104,8 +108,9 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
         val requestBody = imageBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
         val imagePart = MultipartBody.Part.createFormData("image", "profile.jpg", requestBody)
         val repoPart  = repo.toRequestBody("text/plain".toMediaTypeOrNull())
+        val branchPart = branch?.toRequestBody("text/plain".toMediaTypeOrNull())
 
-        val response = api.uploadProfileImage(imagePart, repoPart)
+        val response = api.uploadProfileImage(imagePart, repoPart, branchPart)
         return response.imageUrl
     }
 

@@ -22,10 +22,11 @@ class SetupViewModel(
     private var _cachedParseResponse: ParseResponse? = null
     val cachedParseResponse: ParseResponse? get() = _cachedParseResponse
 
-    fun findPortfolio(repo: String, filePath: String) {
+    fun findPortfolio(repo: String, filePath: String, branch: String) {
         // --- Input Validation & Sanitization ---
         val trimmedRepo = repo.trim().trimEnd('/', '.')
         val trimmedPath = filePath.trim().trimStart('/')
+        val trimmedBranch = branch.trim()
 
         if (trimmedRepo.isBlank()) {
             _uiState.value = SetupUiState.Error("Repository name cannot be empty.")
@@ -33,6 +34,10 @@ class SetupViewModel(
         }
         if (trimmedRepo.contains(" ")) {
             _uiState.value = SetupUiState.Error("Repository name cannot contain spaces.")
+            return
+        }
+        if (trimmedBranch.isBlank()) {
+            _uiState.value = SetupUiState.Error("Branch name cannot be empty.")
             return
         }
         if (trimmedPath.isBlank()) {
@@ -57,12 +62,14 @@ class SetupViewModel(
                 val response = repository.parseResume(
                     owner = owner,
                     repo = trimmedRepo,
-                    filePath = trimmedPath
+                    filePath = trimmedPath,
+                    branch = trimmedBranch
                 )
 
                 // Persist setup details so app skips this screen on next launch
                 SecurePrefsManager.saveRepoName(trimmedRepo)
                 SecurePrefsManager.saveFilePath(trimmedPath)
+                SecurePrefsManager.saveBranchName(trimmedBranch)
                 SecurePrefsManager.setFirstLaunchDone()
 
                 // Cache in both the local property and the process-level AppCache

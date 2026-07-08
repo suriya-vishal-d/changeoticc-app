@@ -49,6 +49,12 @@ object SecurePrefsManager {
 
     fun getRepoName(): String? = prefs.getString(KEY_REPO_NAME, null)?.takeIf { it.isNotBlank() }
 
+    fun saveBranchName(branch: String) {
+        prefs.edit().putString(KEY_BRANCH_NAME, branch).apply()
+    }
+
+    fun getBranchName(): String = prefs.getString(KEY_BRANCH_NAME, "main") ?: "main"
+
     fun saveFilePath(path: String) {
         prefs.edit().putString(KEY_FILE_PATH, path).apply()
     }
@@ -94,9 +100,11 @@ object SecurePrefsManager {
     private const val KEY_GITHUB_USERNAME = "github_username"
     private const val KEY_AVATAR_URL = "avatar_url"
     private const val KEY_REPO_NAME = "repo_name"
+    private const val KEY_BRANCH_NAME = "branch_name"
     private const val KEY_FILE_PATH = "file_path"
     private const val KEY_FIRST_LAUNCH = "first_launch"
     private const val KEY_LAST_UPDATED = "last_updated"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_PORTFOLIO_UPDATE_ACKNOWLEDGED = "portfolio_update_acknowledged"
 }
+

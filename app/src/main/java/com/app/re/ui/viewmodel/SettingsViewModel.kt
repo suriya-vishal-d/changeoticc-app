@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 data class SettingsData(
     val username: String,
     val repoName: String,
+    val branchName: String,
     val filePath: String,
     val portfolioUrl: String,
     val githubRepoUrl: String,
@@ -48,6 +49,18 @@ class SettingsViewModel : ViewModel() {
         _settings.value = loadSettings()
         _savedEvent.tryEmit("Settings saved. Changes will apply next time you edit your portfolio.")
         return null // null = no error
+    }
+
+    // ── Branch name update ───────────────────────────────────────────────────
+
+    fun updateBranchName(newBranch: String): String? {
+        val trimmed = newBranch.trim()
+        if (trimmed.isBlank()) return "Branch name cannot be empty."
+
+        SecurePrefsManager.saveBranchName(trimmed)
+        _settings.value = loadSettings()
+        _savedEvent.tryEmit("Settings saved. Changes will apply next time you edit your portfolio.")
+        return null
     }
 
     // ── File path update ──────────────────────────────────────────────────────
@@ -97,6 +110,7 @@ class SettingsViewModel : ViewModel() {
         return SettingsData(
             username = username,
             repoName = repo,
+            branchName = SecurePrefsManager.getBranchName(),
             filePath = SecurePrefsManager.getFilePath().orEmpty(),
             portfolioUrl = buildPortfolioUrl(username, repo),
             githubRepoUrl = if (username.isNotBlank() && repo.isNotBlank())

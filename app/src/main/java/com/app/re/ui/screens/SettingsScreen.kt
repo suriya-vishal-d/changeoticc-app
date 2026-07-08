@@ -243,6 +243,18 @@ fun SettingsScreen(
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
                 InlineEditRow(
+                    label = "Branch Name",
+                    value = settings.branchName,
+                    placeholder = "main",
+                    onSave = { newVal ->
+                        val error = viewModel.updateBranchName(newVal)
+                        if (error != null) {
+                            scope.launch { snackbarHostState.showSnackbar(error) }
+                        }
+                    }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+                InlineEditRow(
                     label = "File Path",
                     value = settings.filePath,
                     placeholder = "index.html",
