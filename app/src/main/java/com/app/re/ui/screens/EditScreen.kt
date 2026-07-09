@@ -10,8 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,21 +18,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.OpenInNew
+
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -45,12 +43,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
+
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
+
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -62,7 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -622,104 +618,79 @@ private fun ProfilePhotoSection(
 // SKILLS TAB
 // ─────────────────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SkillsTab(resumeData: ResumeData, originalResumeData: ResumeData, viewModel: EditViewModel) {
-    var newCategory by remember { mutableStateOf("") }
-    var newSkill by remember { mutableStateOf("") }
     val skills = resumeData.skills.orEmpty()
 
     TabScaffold {
-        if (skills.isNotEmpty()) {
-            skills.forEach { group ->
-                Text(
-                    text = group.category ?: "General",
-                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                )
+        if (skills.isEmpty()) {
+            Text(
+                text = "No skills found",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            skills.forEachIndexed { groupIndex, group ->
+                // ── Category header — editable ──────────────────────────────
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FieldLabel("Category")
+                    OutlinedTextField(
+                        value = group.category ?: "General",
+                        onValueChange = { viewModel.updateSkillCategory(groupIndex, it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = fieldColors(),
+                        placeholder = { Text("Category name", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) }
+                    )
+                }
+
+                // ── Skill items — each individually editable ─────────────────
                 Card(
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
                 ) {
-                    FlowRow(
+                    Column(
                         modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        group.items.orEmpty().forEach { skill ->
-                            InputChip(
-                                selected = false,
-                                onClick = {},
-                                label = { Text(skill, fontSize = 13.sp) },
-                                trailingIcon = {
-                                    IconButton(
-                                        onClick = { viewModel.removeSkill(group.category ?: "General", skill) },
+                        group.items.orEmpty().forEachIndexed { itemIndex, skill ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = skill,
+                                    onValueChange = { viewModel.updateSkillItem(groupIndex, itemIndex, it) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = fieldColors(),
+                                    placeholder = { Text("Skill name", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) }
+                                )
+                                IconButton(
+                                    onClick = { viewModel.removeSkill(group.category ?: "General", skill) },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove $skill",
+                                        tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(18.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = "Remove $skill",
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                },
-                                colors = InputChipDefaults.inputChipColors(
-                                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(20.dp)
-                            )
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
-        } else {
-            Text("No skills added yet.", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-        }
-
-        FieldLabel("Add a Skill")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = newCategory,
-                onValueChange = { newCategory = it },
-                modifier = Modifier.weight(0.4f),
-                placeholder = { Text("Category (e.g. Languages)", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.6f)) },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                colors = fieldColors()
-            )
-            OutlinedTextField(
-                value = newSkill,
-                onValueChange = { newSkill = it },
-                modifier = Modifier.weight(0.6f),
-                placeholder = { Text("Skill (e.g. Kotlin)", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.6f)) },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                colors = fieldColors()
-            )
-            Button(
-                onClick = {
-                    viewModel.addSkill(newCategory, newSkill)
-                    newSkill = ""
-                },
-                enabled = newSkill.isNotBlank(),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Add")
-            }
         }
     }
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROJECTS TAB

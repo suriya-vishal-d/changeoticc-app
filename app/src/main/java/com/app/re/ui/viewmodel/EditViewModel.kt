@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.app.re.data.model.SkillGroup
+import com.app.re.data.model.BlogPost
 class EditViewModel(
     private val repository: ResumeRepository = ResumeRepository()
 ) : ViewModel() {
@@ -204,6 +205,26 @@ class EditViewModel(
         }
     }
 
+    fun updateSkillCategory(groupIndex: Int, newCategory: String) {
+        val current = _resumeData.value.skills.orEmpty().toMutableList()
+        if (groupIndex in current.indices) {
+            current[groupIndex] = current[groupIndex].copy(category = newCategory)
+            _resumeData.value = _resumeData.value.copy(skills = current)
+        }
+    }
+
+    fun updateSkillItem(groupIndex: Int, itemIndex: Int, newItem: String) {
+        val current = _resumeData.value.skills.orEmpty().toMutableList()
+        if (groupIndex in current.indices) {
+            val items = current[groupIndex].items.orEmpty().toMutableList()
+            if (itemIndex in items.indices) {
+                items[itemIndex] = newItem
+                current[groupIndex] = current[groupIndex].copy(items = items)
+                _resumeData.value = _resumeData.value.copy(skills = current)
+            }
+        }
+    }
+
     // ─── Projects Tab ─────────────────────────────────────────────────────────
 
     fun addProject() {
@@ -280,6 +301,103 @@ class EditViewModel(
         if (index in updated.indices) {
             updated.removeAt(index)
             _resumeData.value = _resumeData.value.copy(education = updated)
+        }
+    }
+
+    // ─── Certifications Tab ───────────────────────────────────────────────────
+
+    fun addCertification(cert: String) {
+        val trimmed = cert.trim()
+        if (trimmed.isBlank()) return
+        val current = _resumeData.value.certifications.orEmpty()
+        if (!current.contains(trimmed)) {
+            _resumeData.value = _resumeData.value.copy(certifications = current + trimmed)
+        }
+    }
+
+    fun removeCertification(cert: String) {
+        val current = _resumeData.value.certifications.orEmpty()
+        _resumeData.value = _resumeData.value.copy(
+            certifications = current.filter { it != cert }
+        )
+    }
+
+    // ─── Achievements Tab ─────────────────────────────────────────────────────
+
+    fun addAchievement(achievement: String) {
+        val trimmed = achievement.trim()
+        if (trimmed.isBlank()) return
+        val current = _resumeData.value.achievements.orEmpty()
+        if (!current.contains(trimmed)) {
+            _resumeData.value = _resumeData.value.copy(achievements = current + trimmed)
+        }
+    }
+
+    fun removeAchievement(achievement: String) {
+        val current = _resumeData.value.achievements.orEmpty()
+        _resumeData.value = _resumeData.value.copy(
+            achievements = current.filter { it != achievement }
+        )
+    }
+
+    // ─── Languages Tab ────────────────────────────────────────────────────────
+
+    fun addLanguage(language: String) {
+        val trimmed = language.trim()
+        if (trimmed.isBlank()) return
+        val current = _resumeData.value.languages.orEmpty()
+        if (!current.contains(trimmed)) {
+            _resumeData.value = _resumeData.value.copy(languages = current + trimmed)
+        }
+    }
+
+    fun removeLanguage(language: String) {
+        val current = _resumeData.value.languages.orEmpty()
+        _resumeData.value = _resumeData.value.copy(
+            languages = current.filter { it != language }
+        )
+    }
+
+    // ─── Hobbies Tab ──────────────────────────────────────────────────────────
+
+    fun addHobby(hobby: String) {
+        val trimmed = hobby.trim()
+        if (trimmed.isBlank()) return
+        val current = _resumeData.value.hobbies.orEmpty()
+        if (!current.contains(trimmed)) {
+            _resumeData.value = _resumeData.value.copy(hobbies = current + trimmed)
+        }
+    }
+
+    fun removeHobby(hobby: String) {
+        val current = _resumeData.value.hobbies.orEmpty()
+        _resumeData.value = _resumeData.value.copy(
+            hobbies = current.filter { it != hobby }
+        )
+    }
+
+    // ─── Blog Posts Tab ───────────────────────────────────────────────────────
+
+    fun addBlogPost() {
+        val current = _resumeData.value.blogPosts.orEmpty()
+        _resumeData.value = _resumeData.value.copy(
+            blogPosts = current + BlogPost(title = "", link = "", date = "")
+        )
+    }
+
+    fun updateBlogPost(index: Int, post: BlogPost) {
+        val updated = _resumeData.value.blogPosts.orEmpty().toMutableList()
+        if (index in updated.indices) {
+            updated[index] = post
+            _resumeData.value = _resumeData.value.copy(blogPosts = updated)
+        }
+    }
+
+    fun removeBlogPost(index: Int) {
+        val updated = _resumeData.value.blogPosts.orEmpty().toMutableList()
+        if (index in updated.indices) {
+            updated.removeAt(index)
+            _resumeData.value = _resumeData.value.copy(blogPosts = updated)
         }
     }
 
