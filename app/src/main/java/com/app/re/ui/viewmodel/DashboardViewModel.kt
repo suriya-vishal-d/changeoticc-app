@@ -58,22 +58,18 @@ class DashboardViewModel(private val repository: ResumeRepository = ResumeReposi
             val filePath = SecurePrefsManager.getFilePath()?.trimStart('/') ?: "index.html"
             val deferred = viewModelScope.async {
                 val cached = SecurePrefsManager.getCachedParseResponse()
-                var latestSha: String? = null
                 
-                try {
-                    // Check if file has changed on GitHub
-                    val fetchRes = repository.fetchResume(username, repoName, filePath)
-                    latestSha = fetchRes.sha
-                    if (cached != null && cached.sha == latestSha) {
-                        return@async cached
-                    }
-                } catch (e: Exception) {
-                    // Offline or repo access error, just fallback to cache if available
-                    if (cached != null) return@async cached
-                }
+                // If we have a cache, we use it. 
+                // Note: We used to check for SHA updates here, but that requires a fetchResume endpoint.
+                if (cached != null) return@async cached
 
-                // If no cache or sha mismatch, we must run the AI parser
-                val response = repository.parseResume(username, repoName, filePath)
+                // If no cache, we must run the AI parser
+                val response = repository.parseResume(
+                    username, 
+                    repoName, 
+                    filePath, 
+                    SecurePrefsManager.getBranchName()
+                )
                 // Cache it so next restart is fast
                 SecurePrefsManager.saveCachedParseResponse(response)
                 response

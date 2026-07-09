@@ -1,6 +1,7 @@
 package com.app.re.util
 
 import com.app.re.data.model.ParseResponse
+import kotlinx.coroutines.Deferred
 
 /**
  * Process-scoped singleton to share parsed portfolio data across ViewModels
@@ -14,7 +15,11 @@ object AppCache {
     @Volatile
     var parseResponse: ParseResponse? = null
 
+    @Volatile
+    var parseDeferred: Deferred<ParseResponse>? = null
+
     fun clear() {
         parseResponse = null
+        parseDeferred = null
     }
 }

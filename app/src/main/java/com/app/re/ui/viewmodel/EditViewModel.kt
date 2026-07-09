@@ -73,6 +73,7 @@ class EditViewModel(
         val owner = SecurePrefsManager.getUsername()
         val repo = SecurePrefsManager.getRepoName()?.trimEnd('/', '.')
         val filePath = SecurePrefsManager.getFilePath()?.trimStart('/')
+        val branch = SecurePrefsManager.getBranchName()
         if (owner == null || repo == null || filePath == null) {
             _screenState.value = EditScreenState.Error("Session data missing. Please log in again.")
             return
@@ -83,7 +84,9 @@ class EditViewModel(
             try {
                 var deferred = AppCache.parseDeferred
                 if (deferred == null) {
-                    deferred = viewModelScope.async { repository.parseResume(owner, repo, filePath) }
+                    deferred = viewModelScope.async { 
+                        repository.parseResume(owner, repo, filePath, branch) 
+                    }
                     AppCache.parseDeferred = deferred
                 }
 
@@ -163,9 +166,14 @@ class EditViewModel(
         _photoUploadState.value = PhotoUploadState.Uploading
         viewModelScope.launch {
             try {
-                val imageUrl = repository.uploadProfileImage(repo, imageUri, context)
-                updateProfileImageUrl(imageUrl)
-                _photoUploadState.value = PhotoUploadState.Success(imageUrl)
+                val branch = SecurePrefsManager.getBranchName()
+                val imageUrl = repository.uploadProfileImage(repo, imageUri, context, branch)
+                
+                // Append timestamp to break Compose recomposition cache and GitHub Pages CDN cache
+                val cacheBustedUrl = "$imageUrl?t=${System.currentTimeMillis()}"
+                
+                updateProfileImageUrl(cacheBustedUrl)
+                _photoUploadState.value = PhotoUploadState.Success(cacheBustedUrl)
             } catch (e: Exception) {
                 val message = when {
                     e.message?.contains("401") == true || e.message?.contains("403") == true ->
@@ -219,6 +227,27 @@ class EditViewModel(
                 current[groupIndex] = group.copy(items = updatedItems)
             }
             _resumeData.value = _resumeData.value.copy(skills = current)
+        }
+    }
+
+    fun updateSkillCategory(groupIndex: Int, newCategory: String) {
+        val current = _resumeData.value.skills.orEmpty().toMutableList()
+        if (groupIndex in current.indices) {
+            current[groupIndex] = current[groupIndex].copy(category = newCategory)
+            _resumeData.value = _resumeData.value.copy(skills = current)
+        }
+    }
+
+    fun updateSkillItem(groupIndex: Int, itemIndex: Int, newValue: String) {
+        val current = _resumeData.value.skills.orEmpty().toMutableList()
+        if (groupIndex in current.indices) {
+            val group = current[groupIndex]
+            val items = group.items.orEmpty().toMutableList()
+            if (itemIndex in items.indices) {
+                items[itemIndex] = newValue
+                current[groupIndex] = group.copy(items = items)
+                _resumeData.value = _resumeData.value.copy(skills = current)
+            }
         }
     }
 
@@ -328,6 +357,7 @@ class EditViewModel(
             _validationError.value = "File path not set."
             return
         }
+        val branch = SecurePrefsManager.getBranchName()
 
         _publishState.value = PublishState.Publishing
 
@@ -344,6 +374,7 @@ class EditViewModel(
                     owner = owner,
                     repo = repo,
                     filePath = filePath,
+                    branch = branch,
                     sha = cachedSha,
                     originalHtml = cachedOriginalHtml,
                     resumeData = _resumeData.value  // re-read after possible URL update from upload
