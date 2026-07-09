@@ -4,10 +4,13 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.app.re.data.model.ParseResponse
+import com.google.gson.Gson
 
 object SecurePrefsManager {
 
     private lateinit var prefs: SharedPreferences
+    private val gson = Gson()
 
     fun init(context: Context) {
         if (::prefs.isInitialized) return
@@ -87,6 +90,24 @@ object SecurePrefsManager {
 
     fun hasSession(): Boolean = getJwt() != null && getRepoName() != null
 
+    fun saveCachedParseResponse(response: ParseResponse?) {
+        if (response == null) {
+            prefs.edit().remove(KEY_CACHED_PARSE_RESPONSE).apply()
+        } else {
+            val json = gson.toJson(response)
+            prefs.edit().putString(KEY_CACHED_PARSE_RESPONSE, json).apply()
+        }
+    }
+
+    fun getCachedParseResponse(): ParseResponse? {
+        val json = prefs.getString(KEY_CACHED_PARSE_RESPONSE, null) ?: return null
+        return try {
+            gson.fromJson(json, ParseResponse::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }
@@ -106,5 +127,6 @@ object SecurePrefsManager {
     private const val KEY_LAST_UPDATED = "last_updated"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_PORTFOLIO_UPDATE_ACKNOWLEDGED = "portfolio_update_acknowledged"
+    private const val KEY_CACHED_PARSE_RESPONSE = "cached_parse_response"
 }
 

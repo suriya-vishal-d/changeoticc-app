@@ -17,8 +17,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CompletableDeferred
+import retrofit2.HttpException
+import org.json.JSONObject
+import kotlinx.coroutines.CancellationException
 import com.app.re.data.model.SkillGroup
-import com.app.re.data.model.BlogPost
 class EditViewModel(
     private val repository: ResumeRepository = ResumeRepository()
 ) : ViewModel() {
@@ -66,41 +70,55 @@ class EditViewModel(
     }
 
     private fun loadData() {
-        val cached = AppCache.parseResponse
-        if (cached != null) {
-            // Use cached data — never re-parse
-            cachedSha = cached.sha
-            cachedOriginalHtml = cached.originalHtml
-            val data = cached.resumeData
-            _originalResumeData.value = data
-            _resumeData.value = data
-            _screenState.value = EditScreenState.Ready
-        } else {
-            // Fallback: re-fetch from network (app restart case, cache was cleared)
-            val owner = SecurePrefsManager.getUsername()
-            val repo = SecurePrefsManager.getRepoName()?.trimEnd('/', '.')
-            val filePath = SecurePrefsManager.getFilePath()?.trimStart('/')
-            val branch = SecurePrefsManager.getBranchName()
-            if (owner == null || repo == null || filePath == null) {
-                _screenState.value = EditScreenState.Error("Session data missing. Please log in again.")
-                return
-            }
-            _screenState.value = EditScreenState.Loading
-            viewModelScope.launch {
-                try {
-                    val response = repository.parseResume(owner, repo, filePath, branch)
-                    AppCache.parseResponse = response
-                    cachedSha = response.sha
-                    cachedOriginalHtml = response.originalHtml
-                    val data = response.resumeData
-                    _originalResumeData.value = data
-                    _resumeData.value = data
-                    _screenState.value = EditScreenState.Ready
-                } catch (e: Exception) {
-                    _screenState.value = EditScreenState.Error(
-                        e.message ?: "Failed to load portfolio. Please try again."
-                    )
+        val owner = SecurePrefsManager.getUsername()
+        val repo = SecurePrefsManager.getRepoName()?.trimEnd('/', '.')
+        val filePath = SecurePrefsManager.getFilePath()?.trimStart('/')
+        if (owner == null || repo == null || filePath == null) {
+            _screenState.value = EditScreenState.Error("Session data missing. Please log in again.")
+            return
+        }
+
+        _screenState.value = EditScreenState.Loading
+        viewModelScope.launch {
+            try {
+                var deferred = AppCache.parseDeferred
+                if (deferred == null) {
+                    deferred = viewModelScope.async { repository.parseResume(owner, repo, filePath) }
+                    AppCache.parseDeferred = deferred
                 }
+
+                val response = deferred.await()
+                cachedSha = response.sha
+                cachedOriginalHtml = response.originalHtml
+                val data = response.resumeData
+                _originalResumeData.value = data
+                _resumeData.value = data
+                _screenState.value = EditScreenState.Ready
+            } catch (e: Exception) {
+                // Clear the deferred so a retry fetches again
+                AppCache.parseDeferred = null
+
+                if (e is CancellationException) {
+                    _screenState.value = EditScreenState.Error("Loading was cancelled. Please try again.")
+                    return@launch
+                }
+
+                var errorMessage = e.message ?: "Failed to load portfolio. Please try again."
+                if (e is HttpException) {
+                    try {
+                        val errorString = e.response()?.errorBody()?.string()
+                        if (!errorString.isNullOrBlank()) {
+                            val json = JSONObject(errorString)
+                            if (json.has("message")) {
+                                errorMessage = json.getString("message")
+                            } else if (json.has("error")) {
+                                errorMessage = json.getString("error")
+                            }
+                        }
+                    } catch (ignore: Exception) {}
+                }
+
+                _screenState.value = EditScreenState.Error(errorMessage)
             }
         }
     }
@@ -142,11 +160,10 @@ class EditViewModel(
             _photoUploadState.value = PhotoUploadState.Error("Repository not set. Please log in again.")
             return
         }
-        val branch = SecurePrefsManager.getBranchName()
         _photoUploadState.value = PhotoUploadState.Uploading
         viewModelScope.launch {
             try {
-                val imageUrl = repository.uploadProfileImage(repo, imageUri, context, branch)
+                val imageUrl = repository.uploadProfileImage(repo, imageUri, context)
                 updateProfileImageUrl(imageUrl)
                 _photoUploadState.value = PhotoUploadState.Success(imageUrl)
             } catch (e: Exception) {
@@ -202,26 +219,6 @@ class EditViewModel(
                 current[groupIndex] = group.copy(items = updatedItems)
             }
             _resumeData.value = _resumeData.value.copy(skills = current)
-        }
-    }
-
-    fun updateSkillCategory(groupIndex: Int, newCategory: String) {
-        val current = _resumeData.value.skills.orEmpty().toMutableList()
-        if (groupIndex in current.indices) {
-            current[groupIndex] = current[groupIndex].copy(category = newCategory)
-            _resumeData.value = _resumeData.value.copy(skills = current)
-        }
-    }
-
-    fun updateSkillItem(groupIndex: Int, itemIndex: Int, newItem: String) {
-        val current = _resumeData.value.skills.orEmpty().toMutableList()
-        if (groupIndex in current.indices) {
-            val items = current[groupIndex].items.orEmpty().toMutableList()
-            if (itemIndex in items.indices) {
-                items[itemIndex] = newItem
-                current[groupIndex] = current[groupIndex].copy(items = items)
-                _resumeData.value = _resumeData.value.copy(skills = current)
-            }
         }
     }
 
@@ -304,103 +301,6 @@ class EditViewModel(
         }
     }
 
-    // ─── Certifications Tab ───────────────────────────────────────────────────
-
-    fun addCertification(cert: String) {
-        val trimmed = cert.trim()
-        if (trimmed.isBlank()) return
-        val current = _resumeData.value.certifications.orEmpty()
-        if (!current.contains(trimmed)) {
-            _resumeData.value = _resumeData.value.copy(certifications = current + trimmed)
-        }
-    }
-
-    fun removeCertification(cert: String) {
-        val current = _resumeData.value.certifications.orEmpty()
-        _resumeData.value = _resumeData.value.copy(
-            certifications = current.filter { it != cert }
-        )
-    }
-
-    // ─── Achievements Tab ─────────────────────────────────────────────────────
-
-    fun addAchievement(achievement: String) {
-        val trimmed = achievement.trim()
-        if (trimmed.isBlank()) return
-        val current = _resumeData.value.achievements.orEmpty()
-        if (!current.contains(trimmed)) {
-            _resumeData.value = _resumeData.value.copy(achievements = current + trimmed)
-        }
-    }
-
-    fun removeAchievement(achievement: String) {
-        val current = _resumeData.value.achievements.orEmpty()
-        _resumeData.value = _resumeData.value.copy(
-            achievements = current.filter { it != achievement }
-        )
-    }
-
-    // ─── Languages Tab ────────────────────────────────────────────────────────
-
-    fun addLanguage(language: String) {
-        val trimmed = language.trim()
-        if (trimmed.isBlank()) return
-        val current = _resumeData.value.languages.orEmpty()
-        if (!current.contains(trimmed)) {
-            _resumeData.value = _resumeData.value.copy(languages = current + trimmed)
-        }
-    }
-
-    fun removeLanguage(language: String) {
-        val current = _resumeData.value.languages.orEmpty()
-        _resumeData.value = _resumeData.value.copy(
-            languages = current.filter { it != language }
-        )
-    }
-
-    // ─── Hobbies Tab ──────────────────────────────────────────────────────────
-
-    fun addHobby(hobby: String) {
-        val trimmed = hobby.trim()
-        if (trimmed.isBlank()) return
-        val current = _resumeData.value.hobbies.orEmpty()
-        if (!current.contains(trimmed)) {
-            _resumeData.value = _resumeData.value.copy(hobbies = current + trimmed)
-        }
-    }
-
-    fun removeHobby(hobby: String) {
-        val current = _resumeData.value.hobbies.orEmpty()
-        _resumeData.value = _resumeData.value.copy(
-            hobbies = current.filter { it != hobby }
-        )
-    }
-
-    // ─── Blog Posts Tab ───────────────────────────────────────────────────────
-
-    fun addBlogPost() {
-        val current = _resumeData.value.blogPosts.orEmpty()
-        _resumeData.value = _resumeData.value.copy(
-            blogPosts = current + BlogPost(title = "", link = "", date = "")
-        )
-    }
-
-    fun updateBlogPost(index: Int, post: BlogPost) {
-        val updated = _resumeData.value.blogPosts.orEmpty().toMutableList()
-        if (index in updated.indices) {
-            updated[index] = post
-            _resumeData.value = _resumeData.value.copy(blogPosts = updated)
-        }
-    }
-
-    fun removeBlogPost(index: Int) {
-        val updated = _resumeData.value.blogPosts.orEmpty().toMutableList()
-        if (index in updated.indices) {
-            updated.removeAt(index)
-            _resumeData.value = _resumeData.value.copy(blogPosts = updated)
-        }
-    }
-
     // ─── Contact Tab ──────────────────────────────────────────────────────────
 
     fun updateContact(contact: Contact) {
@@ -440,12 +340,10 @@ class EditViewModel(
                     _photoUploadState.first { it !is PhotoUploadState.Uploading }
                 }
 
-                val branch = SecurePrefsManager.getBranchName()
                 val response = repository.updateResume(
                     owner = owner,
                     repo = repo,
                     filePath = filePath,
-                    branch = branch,
                     sha = cachedSha,
                     originalHtml = cachedOriginalHtml,
                     resumeData = _resumeData.value  // re-read after possible URL update from upload
@@ -454,11 +352,15 @@ class EditViewModel(
                 // Update local cache so future edits (and re-opening the screen) use the new data!
                 cachedSha = response.newSha
                 cachedOriginalHtml = response.updatedHtml
-                AppCache.parseResponse = com.app.re.data.model.ParseResponse(
+                
+                val newParseResponse = com.app.re.data.model.ParseResponse(
                     sha = response.newSha,
                     originalHtml = response.updatedHtml,
                     resumeData = _resumeData.value
                 )
+                
+                AppCache.parseDeferred = CompletableDeferred(newParseResponse)
+                SecurePrefsManager.saveCachedParseResponse(newParseResponse)
 
                 SecurePrefsManager.saveLastUpdated(System.currentTimeMillis())
                 SecurePrefsManager.setPortfolioUpdateAcknowledged(false)
