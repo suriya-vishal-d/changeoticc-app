@@ -166,11 +166,10 @@ class EditViewModel(
         _photoUploadState.value = PhotoUploadState.Uploading
         viewModelScope.launch {
             try {
-                val branch = SecurePrefsManager.getBranchName()
-                val base64DataUri = repository.uploadProfileImage(repo, imageUri, context, branch)
+                val imageUrl = repository.uploadProfileImage(repo, imageUri, context, cachedOriginalHtml)
                 
-                updateProfileImageUrl(base64DataUri)
-                _photoUploadState.value = PhotoUploadState.Success(base64DataUri)
+                updateProfileImageUrl(imageUrl)
+                _photoUploadState.value = PhotoUploadState.Success(imageUrl)
             } catch (e: Exception) {
 
                 val message = when {
