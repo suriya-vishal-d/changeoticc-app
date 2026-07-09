@@ -113,8 +113,17 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
         val response = api.uploadProfileImage(imagePart, repoPart, htmlPart)
         return response.imageUrl
     }
+    /**
+     * Deletes the profile image file from GitHub via the backend.
+     * @param repo      the GitHub repo name
+     * @param imagePath the repo-relative path of the image, e.g. "assets/img/profile.jpg"
+     */
+    suspend fun deleteProfileImage(repo: String, imagePath: String) {
+        api.deleteProfileImage(repo = repo, imagePath = imagePath)
+    }
 
     suspend fun getRepoStats(repo: String): com.app.re.data.model.RepoStatsResponse {
         return api.getRepoStats(repo)
     }
+}
 

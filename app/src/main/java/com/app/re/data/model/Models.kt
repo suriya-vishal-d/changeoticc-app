@@ -34,6 +34,10 @@ data class ImageUploadResponse(
     val imageUrl: String
 )
 
+data class DeleteImageResponse(
+    val message: String
+)
+
 data class RepoStatsResponse(
     val stars: Int,
     val watchers: Int,

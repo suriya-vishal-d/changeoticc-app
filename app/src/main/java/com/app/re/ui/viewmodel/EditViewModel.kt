@@ -189,6 +189,76 @@ class EditViewModel(
         _photoUploadState.value = PhotoUploadState.Idle
     }
 
+    /**
+     * Deletes the profile image file from GitHub and clears the URL in the UI.
+     * Extracts the repo-relative path from the current profileImageUrl.
+     */
+    fun removeProfileImage() {
+        val repo = SecurePrefsManager.getRepoName()?.trimEnd('/', '.') ?: run {
+            _photoUploadState.value = PhotoUploadState.Error("Repository not set. Please log in again.")
+            return
+        }
+        val currentUrl = _resumeData.value.profileImageUrl
+        if (currentUrl.isNullOrBlank()) {
+            // Nothing to delete locally — just clear the field
+            updateProfileImageUrl("")
+            return
+        }
+
+        // Extract the repo-relative path from the GitHub Pages URL
+        // e.g. "https://user.github.io/repo/assets/img/profile.jpg" -> "assets/img/profile.jpg"
+        val imagePath = extractImagePath(currentUrl, repo)
+        if (imagePath == null) {
+            // URL is not a GitHub Pages URL (e.g. still local) — just clear it
+            updateProfileImageUrl("")
+            return
+        }
+
+        _photoUploadState.value = PhotoUploadState.Uploading
+        viewModelScope.launch {
+            try {
+                repository.deleteProfileImage(repo, imagePath)
+                // Clear the URL in UI state so the placeholder avatar shows
+                updateProfileImageUrl("")
+                _photoUploadState.value = PhotoUploadState.Success("")
+            } catch (e: Exception) {
+                val message = when {
+                    e.message?.contains("401") == true || e.message?.contains("403") == true ->
+                        "GitHub token expired. Please log out and sign in again."
+                    e.message?.contains("Unable to resolve host") == true ||
+                    e.message?.contains("Failed to connect") == true ->
+                        "No internet connection."
+                    else -> e.message ?: "Failed to remove photo. Please try again."
+                }
+                _photoUploadState.value = PhotoUploadState.Error(message)
+            }
+        }
+    }
+
+    /**
+     * Extracts the repo-relative image path from a GitHub Pages URL.
+     * Returns null if the URL doesn't match the expected pattern.
+     */
+    private fun extractImagePath(url: String, repo: String): String? {
+        // Pattern: https://{owner}.github.io/{repo}/{path}
+        val marker = "/$repo/"
+        val idx = url.indexOf(marker)
+        if (idx != -1) {
+            return url.substring(idx + marker.length)
+        }
+        // Pattern for root Pages repo: https://{owner}.github.io/{path}
+        val githubIoMarker = ".github.io/"
+        val ioIdx = url.indexOf(githubIoMarker)
+        if (ioIdx != -1) {
+            val afterIo = url.substring(ioIdx + githubIoMarker.length)
+            // Only return if it looks like a file path (has an extension)
+            if (afterIo.contains('.') && !afterIo.startsWith(repo + "/")) {
+                return afterIo
+            }
+        }
+        return null
+    }
+
     // ─── Skills Tab ───────────────────────────────────────────────────────────
 
     fun addSkill(category: String, skill: String) {
