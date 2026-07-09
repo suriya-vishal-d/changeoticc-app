@@ -370,13 +370,32 @@ class EditViewModel(
                     _photoUploadState.first { it !is PhotoUploadState.Uploading }
                 }
 
+                // If a profile image URL is set and the original HTML still has the
+                // initials placeholder, replace it with an <img> tag before sending
+                // to the backend. The backend Jsoup service also does this swap, but
+                // having it done client-side guarantees the cached HTML is correct
+                // for all subsequent saves (and across app restarts via SecurePrefs).
+                val currentData = _resumeData.value
+                val htmlToSend = if (!currentData.profileImageUrl.isNullOrBlank() &&
+                    cachedOriginalHtml.contains("avatar-initials")) {
+                    val imgTag = "<img class=\"avatar-img\" src=\"${currentData.profileImageUrl}\" alt=\"Profile Picture\">"
+                    // Replace the entire avatar-initials div — handle varying whitespace with regex
+                    cachedOriginalHtml.replace(
+                        Regex("<div[^>]*class=[\"'][^\"']*avatar-initials[^\"']*[\"'][^>]*>.*?</div>",
+                            RegexOption.DOT_MATCHES_ALL),
+                        imgTag
+                    )
+                } else {
+                    cachedOriginalHtml
+                }
+
                 val response = repository.updateResume(
                     owner = owner,
                     repo = repo,
                     filePath = filePath,
                     branch = branch,
                     sha = cachedSha,
-                    originalHtml = cachedOriginalHtml,
+                    originalHtml = htmlToSend,
                     resumeData = _resumeData.value  // re-read after possible URL update from upload
                 )
                 
