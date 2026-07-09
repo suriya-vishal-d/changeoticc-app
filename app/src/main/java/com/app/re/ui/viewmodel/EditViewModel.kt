@@ -154,9 +154,9 @@ class EditViewModel(
     }
 
     /**
-     * Picks a photo from [imageUri], compresses it, uploads it to the GitHub repo,
-     * and updates [resumeData].profileImageUrl with the returned GitHub Pages URL.
-     * The URL is committed to HTML the next time the user taps "Save & Publish".
+     * Picks a photo from [imageUri], compresses it, converts it to a Base64 Data URI,
+     * and updates [resumeData].profileImageUrl.
+     * The Data URI is injected into the HTML the next time the user taps "Save & Publish".
      */
     fun uploadProfileImage(imageUri: Uri, context: Context) {
         val repo = SecurePrefsManager.getRepoName()?.trimEnd('/', '.') ?: run {
@@ -167,14 +167,12 @@ class EditViewModel(
         viewModelScope.launch {
             try {
                 val branch = SecurePrefsManager.getBranchName()
-                val imageUrl = repository.uploadProfileImage(repo, imageUri, context, branch)
+                val base64DataUri = repository.uploadProfileImage(repo, imageUri, context, branch)
                 
-                // Append timestamp to break Compose recomposition cache and GitHub Pages CDN cache
-                val cacheBustedUrl = "$imageUrl?t=${System.currentTimeMillis()}"
-                
-                updateProfileImageUrl(cacheBustedUrl)
-                _photoUploadState.value = PhotoUploadState.Success(cacheBustedUrl)
+                updateProfileImageUrl(base64DataUri)
+                _photoUploadState.value = PhotoUploadState.Success(base64DataUri)
             } catch (e: Exception) {
+
                 val message = when {
                     e.message?.contains("401") == true || e.message?.contains("403") == true ->
                         "GitHub token expired. Please log out and sign in again."
@@ -370,21 +368,21 @@ class EditViewModel(
                     _photoUploadState.first { it !is PhotoUploadState.Uploading }
                 }
 
-                // If a profile image URL is set and the original HTML still has the
-                // initials placeholder, replace it with an <img> tag before sending
-                // to the backend. The backend Jsoup service also does this swap, but
-                // having it done client-side guarantees the cached HTML is correct
-                // for all subsequent saves (and across app restarts via SecurePrefs).
+                // The website's template uses a client-side JavaScript renderPortfolio() function
+                // which relies on the DEFAULT_DATA JSON object. We must update the avatar field
+                // in the JSON rather than injecting an <img> tag into the DOM, otherwise the
+                // JS will just overwrite our injected tag when the page loads.
                 val currentData = _resumeData.value
-                val htmlToSend = if (!currentData.profileImageUrl.isNullOrBlank() &&
-                    cachedOriginalHtml.contains("avatar-initials")) {
-                    val imgTag = "<img class=\"avatar-img\" src=\"${currentData.profileImageUrl}\" alt=\"Profile Picture\">"
-                    // Replace the entire avatar-initials div — handle varying whitespace with regex
-                    cachedOriginalHtml.replace(
-                        Regex("<div[^>]*class=[\"'][^\"']*avatar-initials[^\"']*[\"'][^>]*>.*?</div>",
-                            RegexOption.DOT_MATCHES_ALL),
-                        imgTag
-                    )
+                val newAvatarValue = if (!currentData.profileImageUrl.isNullOrBlank()) {
+                    "\"${currentData.profileImageUrl}\""
+                } else {
+                    "null"
+                }
+
+                // A robust regex to find avatar: null or avatar: "..." (accounting for optional whitespace/quotes)
+                val avatarRegex = Regex("""avatar\s*:\s*(?:null|"[^"]*"|'[^']*')""")
+                val htmlToSend = if (cachedOriginalHtml.contains(avatarRegex)) {
+                    cachedOriginalHtml.replace(avatarRegex, "avatar: $newAvatarValue")
                 } else {
                     cachedOriginalHtml
                 }

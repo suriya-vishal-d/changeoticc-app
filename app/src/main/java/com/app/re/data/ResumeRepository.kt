@@ -104,14 +104,9 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
             originalBitmap.recycle()
         }
 
-        // 4. Build multipart parts and upload
-        val requestBody = imageBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
-        val imagePart = MultipartBody.Part.createFormData("image", "profile.jpg", requestBody)
-        val repoPart  = repo.toRequestBody("text/plain".toMediaTypeOrNull())
-        val branchPart = branch?.toRequestBody("text/plain".toMediaTypeOrNull())
-
-        val response = api.uploadProfileImage(imagePart, repoPart, branchPart)
-        return response.imageUrl
+        // 4. Encode as Base64 Data URI
+        val base64Image = android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP)
+        return "data:image/jpeg;base64,$base64Image"
     }
 
     suspend fun getRepoStats(repo: String): com.app.re.data.model.RepoStatsResponse {
