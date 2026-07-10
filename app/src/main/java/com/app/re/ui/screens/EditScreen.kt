@@ -701,15 +701,23 @@ private fun ProjectsTab(resumeData: ResumeData, originalResumeData: ResumeData, 
     val projects = resumeData.projects.orEmpty()
     val originalProjects = originalResumeData.projects.orEmpty()
     TabScaffold {
-        projects.forEachIndexed { index, project ->
-            val orig = originalProjects.getOrNull(index) ?: project
-            ProjectCard(
-                index = index,
-                project = project,
-                originalProject = orig,
-                onUpdate = { viewModel.updateProject(index, it) },
-                onDelete = { viewModel.removeProject(index) }
+        if (projects.isEmpty()) {
+            Text(
+                text = "No projects found",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
+        } else {
+            projects.forEachIndexed { index, project ->
+                val orig = originalProjects.getOrNull(index) ?: project
+                ProjectCard(
+                    index = index,
+                    project = project,
+                    originalProject = orig,
+                    onUpdate = { viewModel.updateProject(index, it) },
+                    onDelete = { viewModel.removeProject(index) }
+                )
+            }
         }
     }
 }
@@ -766,15 +774,23 @@ private fun ExperienceTab(resumeData: ResumeData, originalResumeData: ResumeData
     val experience = resumeData.experience.orEmpty()
     val originalExperience = originalResumeData.experience.orEmpty()
     TabScaffold {
-        experience.forEachIndexed { index, exp ->
-            val orig = originalExperience.getOrNull(index) ?: exp
-            ExperienceCard(
-                index = index,
-                exp = exp,
-                originalExp = orig,
-                onUpdate = { viewModel.updateExperience(index, it) },
-                onDelete = { viewModel.removeExperience(index) }
+        if (experience.isEmpty()) {
+            Text(
+                text = "No experience found",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
+        } else {
+            experience.forEachIndexed { index, exp ->
+                val orig = originalExperience.getOrNull(index) ?: exp
+                ExperienceCard(
+                    index = index,
+                    exp = exp,
+                    originalExp = orig,
+                    onUpdate = { viewModel.updateExperience(index, it) },
+                    onDelete = { viewModel.removeExperience(index) }
+                )
+            }
         }
     }
 }
@@ -834,15 +850,23 @@ private fun EducationTab(resumeData: ResumeData, originalResumeData: ResumeData,
     val education = resumeData.education.orEmpty()
     val originalEducation = originalResumeData.education.orEmpty()
     TabScaffold {
-        education.forEachIndexed { index, edu ->
-            val orig = originalEducation.getOrNull(index) ?: edu
-            EducationCard(
-                index = index,
-                edu = edu,
-                originalEdu = orig,
-                onUpdate = { viewModel.updateEducation(index, it) },
-                onDelete = { viewModel.removeEducation(index) }
+        if (education.isEmpty()) {
+            Text(
+                text = "No education found",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
+        } else {
+            education.forEachIndexed { index, edu ->
+                val orig = originalEducation.getOrNull(index) ?: edu
+                EducationCard(
+                    index = index,
+                    edu = edu,
+                    originalEdu = orig,
+                    onUpdate = { viewModel.updateEducation(index, it) },
+                    onDelete = { viewModel.removeEducation(index) }
+                )
+            }
         }
     }
 }
@@ -906,39 +930,49 @@ private fun EducationCard(
 private fun ContactTab(resumeData: ResumeData, originalResumeData: ResumeData, viewModel: EditViewModel) {
     val contact = resumeData.contact ?: Contact(null, null, null, null)
     val originalContact = originalResumeData.contact ?: Contact(null, null, null, null)
+    val hasContactDetails = listOf(originalContact.email, originalContact.linkedin, originalContact.github, originalContact.website).any { !it.isNullOrBlank() }
+    
     TabScaffold {
-        if (!originalContact.email.isNullOrBlank()) {
-            EditField(
-                value = contact.email.orEmpty(),
-                onValueChange = { viewModel.updateContact(contact.copy(email = it)) },
-                label = "Email",
-                placeholder = "you@example.com",
-                keyboardType = KeyboardType.Email
+        if (!hasContactDetails) {
+            Text(
+                text = "No contact details found",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        if (!originalContact.linkedin.isNullOrBlank()) {
-            EditField(
-                value = contact.linkedin.orEmpty(),
-                onValueChange = { viewModel.updateContact(contact.copy(linkedin = it)) },
-                label = "LinkedIn URL",
-                placeholder = "https://linkedin.com/in/yourname"
-            )
-        }
-        if (!originalContact.github.isNullOrBlank()) {
-            EditField(
-                value = contact.github.orEmpty(),
-                onValueChange = { viewModel.updateContact(contact.copy(github = it)) },
-                label = "GitHub URL",
-                placeholder = "https://github.com/yourname"
-            )
-        }
-        if (!originalContact.website.isNullOrBlank()) {
-            EditField(
-                value = contact.website.orEmpty(),
-                onValueChange = { viewModel.updateContact(contact.copy(website = it)) },
-                label = "Website",
-                placeholder = "https://yourname.dev"
-            )
+        } else {
+            if (!originalContact.email.isNullOrBlank()) {
+                EditField(
+                    value = contact.email.orEmpty(),
+                    onValueChange = { viewModel.updateContact(contact.copy(email = it)) },
+                    label = "Email",
+                    placeholder = "you@example.com",
+                    keyboardType = KeyboardType.Email
+                )
+            }
+            if (!originalContact.linkedin.isNullOrBlank()) {
+                EditField(
+                    value = contact.linkedin.orEmpty(),
+                    onValueChange = { viewModel.updateContact(contact.copy(linkedin = it)) },
+                    label = "LinkedIn URL",
+                    placeholder = "https://linkedin.com/in/yourname"
+                )
+            }
+            if (!originalContact.github.isNullOrBlank()) {
+                EditField(
+                    value = contact.github.orEmpty(),
+                    onValueChange = { viewModel.updateContact(contact.copy(github = it)) },
+                    label = "GitHub URL",
+                    placeholder = "https://github.com/yourname"
+                )
+            }
+            if (!originalContact.website.isNullOrBlank()) {
+                EditField(
+                    value = contact.website.orEmpty(),
+                    onValueChange = { viewModel.updateContact(contact.copy(website = it)) },
+                    label = "Website",
+                    placeholder = "https://yourname.dev"
+                )
+            }
         }
     }
 }
