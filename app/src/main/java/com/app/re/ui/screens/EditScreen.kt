@@ -468,7 +468,8 @@ private fun AboutTab(resumeData: ResumeData, originalResumeData: ResumeData, vie
         ProfilePhotoSection(
             imageUrl = resumeData.profileImageUrl,
             isUploading = photoUploadState is PhotoUploadState.Uploading,
-            onPickImage = { imagePickerLauncher.launch("image/*") }
+            onPickImage = { imagePickerLauncher.launch("image/*") },
+            onRemoveImage = { viewModel.removeProfileImage() }
         )
 
         if (!originalResumeData.name.isNullOrBlank()) {
@@ -517,7 +518,8 @@ private fun AboutTab(resumeData: ResumeData, originalResumeData: ResumeData, vie
 private fun ProfilePhotoSection(
     imageUrl: String?,
     isUploading: Boolean,
-    onPickImage: () -> Unit
+    onPickImage: () -> Unit,
+    onRemoveImage: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -584,7 +586,7 @@ private fun ProfilePhotoSection(
                 }
             }
 
-            // Camera badge at bottom-right — hidden while uploading
+            // Camera badge (bottom-right) — hidden while uploading
             if (!isUploading) {
                 Box(
                     modifier = Modifier
@@ -599,6 +601,27 @@ private fun ProfilePhotoSection(
                         imageVector = Icons.Default.CameraAlt,
                         contentDescription = "Change photo",
                         tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+
+            // Trash badge (top-right) — only shown when an image is set and not uploading
+            if (!isUploading && !imageUrl.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .align(Alignment.TopEnd)
+                        .clip(CircleShape)
+                        .background(androidx.compose.ui.graphics.Color(0xFFD32F2F))
+                        .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                        .clickable(onClick = onRemoveImage),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Remove photo",
+                        tint = androidx.compose.ui.graphics.Color.White,
                         modifier = Modifier.size(14.dp)
                     )
                 }

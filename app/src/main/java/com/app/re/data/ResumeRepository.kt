@@ -74,7 +74,7 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
      *
      * @return the public GitHub Pages URL of the uploaded image
      */
-    suspend fun uploadProfileImage(repo: String, imageUri: Uri, context: Context, branch: String?): String {
+    suspend fun uploadProfileImage(repo: String, imageUri: Uri, context: Context, originalHtml: String): String {
         // 1. Decode bitmap from URI
         val originalBitmap = context.contentResolver.openInputStream(imageUri)?.use { stream ->
             BitmapFactory.decodeStream(stream)
@@ -104,9 +104,22 @@ class ResumeRepository(private val api: ResumeApi = RetrofitClient.api) {
             originalBitmap.recycle()
         }
 
-        // 4. Encode as Base64 Data URI
-        val base64Image = android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP)
-        return "data:image/jpeg;base64,$base64Image"
+        // 4. Build multipart parts and upload
+        val requestBody = imageBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
+        val imagePart = MultipartBody.Part.createFormData("image", "profile.jpg", requestBody)
+        val repoPart  = repo.toRequestBody("text/plain".toMediaTypeOrNull())
+        val htmlPart = originalHtml.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        val response = api.uploadProfileImage(imagePart, repoPart, htmlPart)
+        return response.imageUrl
+    }
+    /**
+     * Deletes the profile image file from GitHub via the backend.
+     * @param repo      the GitHub repo name
+     * @param imagePath the repo-relative path of the image, e.g. "assets/img/profile.jpg"
+     */
+    suspend fun deleteProfileImage(repo: String, imagePath: String) {
+        api.deleteProfileImage(repo = repo, imagePath = imagePath)
     }
 
     suspend fun getRepoStats(repo: String): com.app.re.data.model.RepoStatsResponse {

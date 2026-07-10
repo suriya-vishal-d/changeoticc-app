@@ -274,6 +274,8 @@ private fun HeroPreviewCard(
                     factory = { ctx ->
                         WebView(ctx).apply {
                             settings.javaScriptEnabled    = true
+                            // Disable caching so the preview always shows the latest commits
+                            settings.cacheMode            = android.webkit.WebSettings.LOAD_NO_CACHE
                             // "Overview mode" scales the page to fit the WebView width —
                             // this is the key setting that makes the thumbnail work.
                             settings.loadWithOverviewMode = true
@@ -287,6 +289,7 @@ private fun HeroPreviewCard(
                             isVerticalScrollBarEnabled    = false
                             isHorizontalScrollBarEnabled  = false
                             webViewClient = WebViewClient()
+                            clearCache(true)
                             loadUrl(dashInfo.portfolioUrl)
                         }
                     },

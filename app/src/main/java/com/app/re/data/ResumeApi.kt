@@ -1,5 +1,6 @@
 package com.app.re.data
 
+import com.app.re.data.model.DeleteImageResponse
 import com.app.re.data.model.ImageUploadResponse
 import com.app.re.data.model.ParseRequest
 import com.app.re.data.model.ParseResponse
@@ -19,6 +20,20 @@ interface ResumeApi {
 
     @POST("resume/update")
     suspend fun updateResume(@Body request: UpdateRequest): UpdateResponse
+
+    @Multipart
+    @POST("resume/upload-image")
+    suspend fun uploadProfileImage(
+        @Part image: MultipartBody.Part,
+        @Part("repo") repo: RequestBody,
+        @Part("originalHtml") originalHtml: RequestBody
+    ): ImageUploadResponse
+
+    @retrofit2.http.POST("resume/delete-image")
+    suspend fun deleteProfileImage(
+        @retrofit2.http.Query("repo") repo: String,
+        @retrofit2.http.Query("imagePath") imagePath: String
+    ): DeleteImageResponse
 
     @retrofit2.http.GET("resume/stats")
     suspend fun getRepoStats(@retrofit2.http.Query("repo") repo: String): com.app.re.data.model.RepoStatsResponse
