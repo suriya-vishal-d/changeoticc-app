@@ -43,6 +43,7 @@ okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-i
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+androidx-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

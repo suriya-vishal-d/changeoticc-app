@@ -6,6 +6,7 @@ import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,14 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +37,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
@@ -51,6 +55,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.re.R
+import com.app.re.ui.theme.AccentCyan
+import com.app.re.ui.theme.DarkGlassStroke
+import com.app.re.ui.theme.DarkGlowPrimary
+import com.app.re.ui.theme.DarkSurfaceElevated
+import com.app.re.ui.theme.ElectricAccent
+import com.app.re.ui.theme.GradientButton
+import com.app.re.ui.theme.GradientEnd
+import com.app.re.ui.theme.GradientStart
+import com.app.re.ui.theme.glassCard
 import com.app.re.ui.viewmodel.LoginUiState
 import com.app.re.ui.viewmodel.LoginViewModel
 import kotlinx.coroutines.delay
@@ -100,11 +113,10 @@ fun LoginScreen(
                 )
                 return@collect
             }
-
             val customTabsIntent = CustomTabsIntent.Builder()
                 .setShowTitle(true)
                 .build()
-            customTabsIntent.launchUrl(context, url.toUri())//this watches for openCustomTabs () from the loginviewmodel and laucnhes GET request to springboot
+            customTabsIntent.launchUrl(context, url.toUri())
         }
     }
 
@@ -122,126 +134,185 @@ fun LoginScreen(
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        modifier      = modifier.fillMaxSize(),
+        snackbarHost  = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(72.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Connect GitHub",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 28.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Sign in with GitHub to access and edit your portfolio",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                InfoCard("Your credentials are stored securely on your device")
-                InfoCard("AI reads your HTML so you don't have to")
-                InfoCard("Changes go live on GitHub Pages instantly")
-            }
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Button(
-                    onClick = viewModel::onLoginClick,
-                    enabled = uiState !is LoginUiState.Loading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                        disabledContentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    if (uiState is LoginUiState.Loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(22.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
+            // ── Background gradient blobs ────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .size(400.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                GradientStart.copy(alpha = 0.15f),
+                                Color.Transparent
+                            )
                         )
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_github),
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "Continue with GitHub",
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(innerPadding)
+                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // ── Header ───────────────────────────────────────────────
+                Column(
+                    modifier            = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(DarkGlowPrimary, RoundedCornerShape(24.dp))
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(
+                                Brush.linearGradient(listOf(GradientStart, GradientEnd))
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter           = painterResource(R.drawable.ic_github),
+                            contentDescription = null,
+                            modifier          = Modifier.size(38.dp),
+                            tint              = Color.White
+                        )
                     }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text  = "Connect GitHub",
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize   = 30.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text      = "Sign in with GitHub to access and edit your portfolio",
+                        style     = MaterialTheme.typography.bodyLarge,
+                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                // ── Feature cards ────────────────────────────────────────
+                Column(
+                    modifier            = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    InfoCard(
+                        icon  = Icons.Default.Lock,
+                        text  = "Your credentials are stored securely on your device"
+                    )
+                    InfoCard(
+                        icon  = Icons.Default.SmartToy,
+                        text  = "AI reads your HTML so you don't have to"
+                    )
+                    InfoCard(
+                        icon  = Icons.Default.RocketLaunch,
+                        text  = "Changes go live on GitHub Pages instantly"
+                    )
+                }
 
-                Text(
-                    text = "You will be redirected to GitHub to authorize this app",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
+                // ── CTA section ──────────────────────────────────────────
+                Column(
+                    modifier            = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (uiState is LoginUiState.Loading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(GradientStart.copy(alpha = 0.6f), GradientEnd.copy(alpha = 0.6f))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier    = Modifier.size(24.dp),
+                                color       = Color.White,
+                                strokeWidth = 2.5.dp
+                            )
+                        }
+                    } else {
+                        GradientButton(
+                            text    = "Continue with GitHub",
+                            onClick = viewModel::onLoginClick,
+                            enabled = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = {
+                                Icon(
+                                    painter           = painterResource(R.drawable.ic_github),
+                                    contentDescription = null,
+                                    modifier          = Modifier.size(22.dp),
+                                    tint              = Color.White
+                                )
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text      = "You will be redirected to GitHub to authorize this app",
+                        style     = MaterialTheme.typography.bodySmall,
+                        color     = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun InfoCard(text: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+private fun InfoCard(icon: ImageVector, text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassCard(
+                shape           = RoundedCornerShape(16.dp),
+                borderColor     = DarkGlassStroke,
+                backgroundColor = DarkSurfaceElevated
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(ElectricAccent.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector       = icon,
+                contentDescription = null,
+                modifier          = Modifier.size(18.dp),
+                tint              = ElectricAccent
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
         Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            text  = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
         )
     }
 }
@@ -249,8 +320,7 @@ private fun InfoCard(text: String) {
 private fun android.content.Context.canOpenCustomTab(): Boolean {
     val customTabPackage = CustomTabsClient.getPackageName(this, null)
     if (customTabPackage != null) return true
-
-    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("http://www.google.com"))
+    val browserIntent    = Intent(Intent.ACTION_VIEW, Uri.parse("http://www.google.com"))
     val resolvedActivity = packageManager.resolveActivity(browserIntent, 0)
     return resolvedActivity != null
 }

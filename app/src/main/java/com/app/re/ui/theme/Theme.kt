@@ -10,39 +10,48 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    onPrimary = DarkOnPrimary,
-    background = DarkBackground,
-    onBackground = DarkOnBackground,
-    surface = DarkSurface,
-    onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    outline = DarkOutline,
-    error = ErrorRed
+    primary          = DarkPrimary,
+    onPrimary        = DarkOnPrimary,
+    background       = DarkBackground,
+    onBackground     = DarkOnBackground,
+    surface          = DarkSurface,
+    onSurface        = DarkOnSurface,
+    surfaceVariant   = DarkSurfaceVariant,
+    onSurfaceVariant = ElectricAccent.copy(alpha = 0.75f),
+    outline          = DarkOutline,
+    primaryContainer = GradientStart.copy(alpha = 0.2f),
+    onPrimaryContainer = ElectricAccent,
+    secondaryContainer = DarkSurfaceElevated,
+    error            = ErrorRed
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = LightPrimary,
-    onPrimary = LightOnPrimary,
-    background = LightBackground,
-    onBackground = LightOnBackground,
-    surface = LightSurface,
-    onSurface = LightOnSurface,
-    surfaceVariant = LightSurfaceVariant,
-    outline = LightOutline,
-    error = ErrorRed
+    primary          = LightPrimary,
+    onPrimary        = LightOnPrimary,
+    background       = LightBackground,
+    onBackground     = LightOnBackground,
+    surface          = LightSurface,
+    onSurface        = LightOnSurface,
+    surfaceVariant   = LightSurfaceVariant,
+    onSurfaceVariant = LightPrimary.copy(alpha = 0.7f),
+    outline          = LightOutline,
+    primaryContainer = LightSurfaceElevated,
+    onPrimaryContainer = LightPrimary,
+    secondaryContainer = LightSurfaceVariant,
+    error            = ErrorRed
 )
 
 @Composable
 fun ResumeEditorTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is disabled to use our custom brand colors
+    // Dynamic color disabled — use our custom brand colors
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -51,22 +60,24 @@ fun ResumeEditorTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else      -> LightColorScheme
     }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            // Edge-to-edge: transparent status bar
+            window.statusBarColor = Color.Transparent.toArgb()
+            WindowCompat.setDecorFitsSystemWindows(window, false)
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+        typography  = Typography,
+        content     = content
     )
 }
