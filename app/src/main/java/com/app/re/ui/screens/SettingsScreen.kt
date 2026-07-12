@@ -2,18 +2,22 @@ package com.app.re.ui.screens
 
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -67,6 +72,13 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.re.BuildConfig
+import com.app.re.ui.theme.DarkGlassStroke
+import com.app.re.ui.theme.DarkSurfaceElevated
+import com.app.re.ui.theme.ElectricAccent
+import com.app.re.ui.theme.GradientEnd
+import com.app.re.ui.theme.GradientSectionLabel
+import com.app.re.ui.theme.GradientStart
+import com.app.re.ui.theme.glassCard
 import com.app.re.ui.viewmodel.SettingsData
 import com.app.re.ui.viewmodel.SettingsViewModel
 import com.app.re.util.SecurePrefsManager
@@ -86,46 +98,34 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
+    var showThemeDialog  by remember { mutableStateOf(false) }
 
-    // Collect one-shot events
     LaunchedEffect(Unit) {
-        launch {
-            viewModel.savedEvent.collect { msg ->
-                snackbarHostState.showSnackbar(msg)
-            }
-        }
-        launch {
-            viewModel.rescanEvent.collect { msg ->
-                snackbarHostState.showSnackbar(msg)
-            }
-        }
-        launch {
-            viewModel.logoutEvent.collect {
-                onNavigateToWelcome()
-            }
-        }
+        launch { viewModel.savedEvent.collect  { msg -> snackbarHostState.showSnackbar(msg) } }
+        launch { viewModel.rescanEvent.collect { msg -> snackbarHostState.showSnackbar(msg) } }
+        launch { viewModel.logoutEvent.collect { onNavigateToWelcome() } }
     }
 
-    // Logout confirmation dialog
+    // Logout dialog
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = {
+            containerColor   = DarkSurfaceElevated,
+            title            = {
                 Text(
                     "Disconnect GitHub?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
-            text = {
+            text             = {
                 Text(
-                    "This will remove your GitHub connection and all saved data from this device. " +
-                            "You will need to log in again.",
+                    "This will remove your GitHub connection and all saved data from this device.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
-            confirmButton = {
+            confirmButton    = {
                 TextButton(onClick = {
                     showLogoutDialog = false
                     viewModel.logout()
@@ -133,192 +133,206 @@ fun SettingsScreen(
                     Text("Disconnect", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
-            dismissButton = {
+            dismissButton    = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Cancel", color = ElectricAccent)
                 }
             }
         )
     }
 
-    // Theme selection dialog
+    // Theme dialog
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = {
+            containerColor   = DarkSurfaceElevated,
+            title            = {
                 Text(
                     "Choose Theme",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            text             = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     ThemeOption(
-                        label = "System Default",
+                        label    = "System Default",
                         selected = settings.themeMode == SecurePrefsManager.THEME_SYSTEM,
-                        onClick = {
-                            viewModel.updateThemeMode(SecurePrefsManager.THEME_SYSTEM)
-                            showThemeDialog = false
-                        }
+                        onClick  = { viewModel.updateThemeMode(SecurePrefsManager.THEME_SYSTEM); showThemeDialog = false }
                     )
                     ThemeOption(
-                        label = "Light",
+                        label    = "Light",
                         selected = settings.themeMode == SecurePrefsManager.THEME_LIGHT,
-                        onClick = {
-                            viewModel.updateThemeMode(SecurePrefsManager.THEME_LIGHT)
-                            showThemeDialog = false
-                        }
+                        onClick  = { viewModel.updateThemeMode(SecurePrefsManager.THEME_LIGHT); showThemeDialog = false }
                     )
                     ThemeOption(
-                        label = "Dark",
+                        label    = "Dark",
                         selected = settings.themeMode == SecurePrefsManager.THEME_DARK,
-                        onClick = {
-                            viewModel.updateThemeMode(SecurePrefsManager.THEME_DARK)
-                            showThemeDialog = false
-                        }
+                        onClick  = { viewModel.updateThemeMode(SecurePrefsManager.THEME_DARK); showThemeDialog = false }
                     )
                 }
             },
-            confirmButton = {}
+            confirmButton    = {}
         )
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
+        modifier       = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost   = { SnackbarHost(snackbarHostState) },
+        topBar         = {
             TopAppBar(
-                title = {
+                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+                title    = {
                     Text(
                         "Settings",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        ),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint               = ElectricAccent
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                )
             )
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // ── Account Section ───────────────────────────────────────────
-            SettingsSection(title = "Account") {
-                AccountRow(settings = settings)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-                SettingsRow(
-                    icon = null,
-                    label = "Disconnect GitHub",
-                    labelColor = MaterialTheme.colorScheme.error,
-                    onClick = { showLogoutDialog = true }
-                )
-            }
-
-            // ── Portfolio Section ─────────────────────────────────────────
-            SettingsSection(title = "Portfolio") {
-                InlineEditRow(
-                    label = "Repository Name",
-                    value = settings.repoName,
-                    placeholder = "e.g. portfolio",
-                    onSave = { newVal ->
-                        val error = viewModel.updateRepoName(newVal)
-                        if (error != null) {
-                            scope.launch { snackbarHostState.showSnackbar(error) }
-                        }
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-                InlineEditRow(
-                    label = "Branch Name",
-                    value = settings.branchName,
-                    placeholder = "main",
-                    onSave = { newVal ->
-                        val error = viewModel.updateBranchName(newVal)
-                        if (error != null) {
-                            scope.launch { snackbarHostState.showSnackbar(error) }
-                        }
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-                InlineEditRow(
-                    label = "File Path",
-                    value = settings.filePath,
-                    placeholder = "index.html",
-                    onSave = { newVal ->
-                        val error = viewModel.updateFilePath(newVal)
-                        if (error != null) {
-                            scope.launch { snackbarHostState.showSnackbar(error) }
-                        }
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-                SettingsRow(
-                    icon = Icons.Default.Refresh,
-                    label = "Re-scan Portfolio",
-                    sublabel = "Clear cached data and fetch fresh from GitHub",
-                    onClick = { viewModel.rescanPortfolio() }
-                )
-            }
-
-            // ── Appearance Section ────────────────────────────────────────
-            SettingsSection(title = "Appearance") {
-                SettingsRow(
-                    icon = when (settings.themeMode) {
-                        SecurePrefsManager.THEME_LIGHT -> Icons.Default.LightMode
-                        SecurePrefsManager.THEME_DARK -> Icons.Default.DarkMode
-                        else -> Icons.Default.Brightness4
-                    },
-                    label = "App Theme",
-                    sublabel = when (settings.themeMode) {
-                        SecurePrefsManager.THEME_LIGHT -> "Light"
-                        SecurePrefsManager.THEME_DARK -> "Dark"
-                        else -> "System Default"
-                    },
-                    onClick = { showThemeDialog = true }
-                )
-            }
-
-            // ── App Section ───────────────────────────────────────────────
-            SettingsSection(title = "App") {
-                if (settings.githubRepoUrl.isNotBlank()) {
-                    SettingsRow(
-                        icon = Icons.Default.OpenInNew,
-                        label = "Visit GitHub Repo",
-                        sublabel = settings.githubRepoUrl,
-                        onClick = {
-                            CustomTabsIntent.Builder().setShowTitle(true).build()
-                                .launchUrl(context, settings.githubRepoUrl.toUri())
-                        }
+            // Background glow
+            Box(
+                modifier = Modifier
+                    .size(300.dp)
+                    .align(Alignment.TopEnd)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                GradientStart.copy(alpha = 0.08f),
+                                Color.Transparent
+                            )
+                        )
                     )
-                }
-            }
-
-            // ── Version footer ────────────────────────────────────────────
-            Text(
-                text = "Portfolio Editor  v${BuildConfig.VERSION_NAME}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
-            Spacer(Modifier.height(16.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(22.dp)
+            ) {
+                // ── Account ───────────────────────────────────────────────
+                SettingsSection(title = "Account") {
+                    AccountRow(settings = settings)
+                    HorizontalDivider(color = DarkGlassStroke, thickness = 0.5.dp)
+                    SettingsRow(
+                        icon       = null,
+                        label      = "Disconnect GitHub",
+                        labelColor = MaterialTheme.colorScheme.error,
+                        onClick    = { showLogoutDialog = true }
+                    )
+                }
+
+                // ── Portfolio ─────────────────────────────────────────────
+                SettingsSection(title = "Portfolio") {
+                    InlineEditRow(
+                        label       = "Repository Name",
+                        value       = settings.repoName,
+                        placeholder = "e.g. portfolio",
+                        onSave      = { newVal ->
+                            val error = viewModel.updateRepoName(newVal)
+                            if (error != null) scope.launch { snackbarHostState.showSnackbar(error) }
+                        }
+                    )
+                    HorizontalDivider(color = DarkGlassStroke, thickness = 0.5.dp)
+                    InlineEditRow(
+                        label       = "Branch Name",
+                        value       = settings.branchName,
+                        placeholder = "main",
+                        onSave      = { newVal ->
+                            val error = viewModel.updateBranchName(newVal)
+                            if (error != null) scope.launch { snackbarHostState.showSnackbar(error) }
+                        }
+                    )
+                    HorizontalDivider(color = DarkGlassStroke, thickness = 0.5.dp)
+                    InlineEditRow(
+                        label       = "File Path",
+                        value       = settings.filePath,
+                        placeholder = "index.html",
+                        onSave      = { newVal ->
+                            val error = viewModel.updateFilePath(newVal)
+                            if (error != null) scope.launch { snackbarHostState.showSnackbar(error) }
+                        }
+                    )
+                    HorizontalDivider(color = DarkGlassStroke, thickness = 0.5.dp)
+                    SettingsRow(
+                        icon     = Icons.Default.Refresh,
+                        label    = "Re-scan Portfolio",
+                        sublabel = "Clear cached data and fetch fresh from GitHub",
+                        onClick  = { viewModel.rescanPortfolio() }
+                    )
+                }
+
+                // ── Appearance ────────────────────────────────────────────
+                SettingsSection(title = "Appearance") {
+                    SettingsRow(
+                        icon = when (settings.themeMode) {
+                            SecurePrefsManager.THEME_LIGHT -> Icons.Default.LightMode
+                            SecurePrefsManager.THEME_DARK  -> Icons.Default.DarkMode
+                            else                           -> Icons.Default.Brightness4
+                        },
+                        label    = "App Theme",
+                        sublabel = when (settings.themeMode) {
+                            SecurePrefsManager.THEME_LIGHT -> "Light"
+                            SecurePrefsManager.THEME_DARK  -> "Dark"
+                            else                           -> "System Default"
+                        },
+                        onClick = { showThemeDialog = true }
+                    )
+                }
+
+                // ── App ───────────────────────────────────────────────────
+                if (settings.githubRepoUrl.isNotBlank()) {
+                    SettingsSection(title = "App") {
+                        SettingsRow(
+                            icon     = Icons.Default.OpenInNew,
+                            label    = "Visit GitHub Repo",
+                            sublabel = settings.githubRepoUrl,
+                            onClick  = {
+                                CustomTabsIntent.Builder().setShowTitle(true).build()
+                                    .launchUrl(context, settings.githubRepoUrl.toUri())
+                            }
+                        )
+                    }
+                }
+
+                // ── Footer ────────────────────────────────────────────────
+                Text(
+                    text     = "Portfolio Editor  v${BuildConfig.VERSION_NAME}",
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+
+                Spacer(Modifier.height(16.dp))
+            }
         }
     }
 }
+
+// ── Theme option ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun ThemeOption(
@@ -327,7 +341,7 @@ private fun ThemeOption(
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
+        modifier          = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
             .padding(vertical = 4.dp),
@@ -336,9 +350,9 @@ private fun ThemeOption(
         RadioButton(selected = selected, onClick = onClick)
         Spacer(Modifier.width(8.dp))
         Text(
-            text = label,
+            text  = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = if (selected) ElectricAccent else MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -350,21 +364,16 @@ private fun SettingsSection(
     title: String,
     content: @Composable () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.8.sp
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        GradientSectionLabel(text = title)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.surface)
+                .glassCard(
+                    shape           = RoundedCornerShape(16.dp),
+                    borderColor     = DarkGlassStroke,
+                    backgroundColor = DarkSurfaceElevated
+                )
         ) {
             content()
         }
@@ -376,41 +385,39 @@ private fun SettingsSection(
 @Composable
 private fun AccountRow(settings: SettingsData) {
     Row(
-        modifier = Modifier
+        modifier          = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Avatar circle
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(48.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary),
+                .background(
+                    Brush.linearGradient(listOf(GradientStart, GradientEnd))
+                ),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = settings.username.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                color = MaterialTheme.colorScheme.onPrimary,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
+                text  = settings.username.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = settings.username.ifBlank { "Unknown" },
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface,
+                text     = settings.username.ifBlank { "Unknown" },
+                style    = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                color    = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "github.com/${settings.username}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text     = "github.com/${settings.username}",
+                style    = MaterialTheme.typography.bodySmall,
+                color    = ElectricAccent.copy(alpha = 0.8f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -429,34 +436,42 @@ private fun SettingsRow(
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
+        modifier              = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(ElectricAccent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector        = icon,
+                    contentDescription = label,
+                    tint               = ElectricAccent,
+                    modifier           = Modifier.size(16.dp)
+                )
+            }
         } else {
-            Spacer(Modifier.size(20.dp))
+            Spacer(Modifier.size(32.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = label,
+                text  = label,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = labelColor
             )
             if (!sublabel.isNullOrBlank()) {
                 Text(
-                    text = sublabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text     = sublabel,
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -475,104 +490,93 @@ private fun InlineEditRow(
     placeholder: String,
     onSave: (String) -> Unit
 ) {
-    var editing by rememberSaveable { mutableStateOf(false) }
+    var editing    by rememberSaveable { mutableStateOf(false) }
     var draftValue by rememberSaveable(value) { mutableStateOf(value) }
 
     if (editing) {
-        // Edit mode
         Column(
-            modifier = Modifier
+            modifier            = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = label,
+                text  = label,
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = ElectricAccent
             )
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
-                    value = draftValue,
+                    value         = draftValue,
                     onValueChange = { draftValue = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.outline) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    modifier      = Modifier.weight(1f),
+                    placeholder   = { Text(placeholder, color = MaterialTheme.colorScheme.outline) },
+                    singleLine    = true,
+                    shape         = RoundedCornerShape(10.dp),
+                    colors        = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor    = ElectricAccent,
+                        unfocusedBorderColor  = DarkGlassStroke,
+                        focusedContainerColor = DarkSurfaceElevated,
+                        unfocusedContainerColor = DarkSurfaceElevated,
+                        cursorColor           = ElectricAccent
                     )
                 )
-                // Confirm
                 IconButton(
-                    onClick = {
-                        onSave(draftValue)
-                        editing = false
-                    },
+                    onClick  = { onSave(draftValue); editing = false },
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(Brush.linearGradient(listOf(GradientStart, GradientEnd)))
                 ) {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = "Save",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Icon(Icons.Default.Check, "Save", tint = Color.White, modifier = Modifier.size(18.dp))
                 }
-                // Cancel
                 IconButton(
-                    onClick = {
-                        draftValue = value
-                        editing = false
-                    },
+                    onClick  = { draftValue = value; editing = false },
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(DarkGlassStroke)
                 ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Cancel",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Icon(Icons.Default.Close, "Cancel", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
                 }
             }
         }
     } else {
-        // Read mode — acts like a normal settings row with a pencil icon
         Row(
-            modifier = Modifier
+            modifier              = Modifier
                 .fillMaxWidth()
                 .clickable { editing = true }
                 .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = "Edit $label",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(ElectricAccent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector        = Icons.Default.Edit,
+                    contentDescription = "Edit $label",
+                    tint               = ElectricAccent,
+                    modifier           = Modifier.size(16.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = label,
+                    text  = label,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = value.ifBlank { placeholder },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (value.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant,
+                    text     = value.ifBlank { placeholder },
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = if (value.isBlank()) MaterialTheme.colorScheme.outline else ElectricAccent.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
